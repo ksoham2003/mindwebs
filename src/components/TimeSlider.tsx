@@ -17,13 +17,11 @@ export const TimelineSlider: React.FC<TimelineSliderProps> = ({ mode, onChange, 
   const endDate = addDays(now, 15);
   const totalHours = differenceInHours(endDate, startDate);
 
-  // Generate tick marks for every 3 days
   const tickMarks = Array.from({ length: 6 }, (_, i) => i * 3 * 24);
 
-  // Handle mode changes
   useEffect(() => {
     if (mode === 'range' && value.length === 1) {
-      onChange([value[0], Math.min(value[0] + 24, totalHours)]); // Default 24h range
+      onChange([value[0], Math.min(value[0] + 24, totalHours)]);
     } else if (mode === 'single' && value.length > 1) {
       onChange([value[0]]);
     }
@@ -38,7 +36,6 @@ export const TimelineSlider: React.FC<TimelineSliderProps> = ({ mode, onChange, 
     if (mode === 'single') {
       onChange([newValue[0]]);
     } else {
-      // Ensure valid range (start <= end)
       const [start, end] = newValue.length === 2 
         ? [Math.min(newValue[0], newValue[1]), Math.max(newValue[0], newValue[1])]
         : [newValue[0], newValue[0] + 24];
@@ -65,19 +62,17 @@ export const TimelineSlider: React.FC<TimelineSliderProps> = ({ mode, onChange, 
           </div>
         </div>
 
-        {/* Main Slider */}
         <div className="relative">
           <Slider
             min={0}
             max={totalHours}
-            step={1} // Hourly resolution
+            step={1}
             value={mode === 'single' ? [value[0]] : value}
             onValueChange={handleValueChange}
             minStepsBetweenThumbs={mode === 'single' ? 0 : 1}
             className="w-full"
           />
 
-          {/* Time markers */}
           <div className="flex justify-between mt-2 text-xs text-muted-foreground">
             {tickMarks.map((hour) => (
               <div key={hour} className="flex flex-col items-center">
@@ -88,7 +83,6 @@ export const TimelineSlider: React.FC<TimelineSliderProps> = ({ mode, onChange, 
           </div>
         </div>
 
-        {/* Quick selection buttons */}
         <div className="flex gap-2">
           <button
             onClick={() => onChange(mode === 'single' 
