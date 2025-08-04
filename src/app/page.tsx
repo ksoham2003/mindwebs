@@ -48,55 +48,63 @@ export default function Dashboard() {
 
   const [latitude] = useState<number>(22.5726);
   const [longitude] = useState<number>(88.3639);
-  const now = new Date();
-  const startDate = subDays(now, 15);
+  // In your fetchWeatherData function (page.tsx):
+  const today = new Date();
+  const endDate = subDays(today, 1); // Yesterday (last available date)
+  const startDate = subDays(endDate, 14); // 15-day window (including endDate)
+
+  // Format dates ensuring they're within valid range
+  const formattedEndDate = format(endDate, 'yyyy-MM-dd');
+  const formattedStartDate = format(startDate, 'yyyy-MM-dd');
   const selectedTime = addHours(startDate, sliderValue[0]);
   const selectedEndTime = addHours(startDate, sliderValue[sliderValue.length - 1]);
 
   const fetchWeatherData = useCallback(async (): Promise<void> => {
-    setIsLoading(true);
-    try {
-      const endDate = new Date();
-      const startDate = subDays(endDate, 15);
+  setIsLoading(true);
+  try {
+    const today = new Date();
+    const endDate = subDays(today, 1); // Yesterday (last available date)
+    const startDate = subDays(endDate, 14); // 15-day window
 
-      const cacheKey = `weather-${latitude}-${longitude}-${format(startDate, 'yyyy-MM-dd')}`;
-      const cachedData = localStorage.getItem(cacheKey);
-      
-      if (cachedData) {
-        setWeatherData(JSON.parse(cachedData));
-        return;
-      }
-
-      try {
-        const response = await fetch(
-          `https://archive-api.open-meteo.com/v1/archive?latitude=${latitude}&longitude=${longitude}&start_date=${format(startDate, 'yyyy-MM-dd')}&end_date=${format(endDate, 'yyyy-MM-dd')}&hourly=temperature_2m`
-        );
-
-        if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
-        const data = await response.json();
-
-        const chartData: WeatherDataPoint[] = data.hourly.time.map((time: string, index: number) => ({
-          time: format(new Date(time), 'MMM d HH:mm'),
-          temperature: data.hourly.temperature_2m[index],
-        }));
-
-        localStorage.setItem(cacheKey, JSON.stringify(chartData));
-        setWeatherData(chartData);
-      } catch (apiError) {
-        console.warn('API request failed, using mock data:', apiError);
-        const mockData = generateMockWeatherData(startDate, endDate);
-        setWeatherData(mockData);
-      }
-    } catch (error) {
-      console.error('Error fetching weather data:', error);
-      const endDate = new Date();
-      const startDate = subDays(endDate, 15);
-      const mockData = generateMockWeatherData(startDate, endDate);
-      setWeatherData(mockData);
-    } finally {
-      setIsLoading(false);
+    const cacheKey = `weather-${latitude}-${longitude}-${format(startDate, 'yyyy-MM-dd')}`;
+    const cachedData = localStorage.getItem(cacheKey);
+    
+    if (cachedData) {
+      setWeatherData(JSON.parse(cachedData));
+      return;
     }
-  }, [latitude, longitude]);
+
+    try {
+      const response = await fetch(
+        `https://archive-api.open-meteo.com/v1/archive?latitude=${latitude}&longitude=${longitude}&start_date=${format(startDate, 'yyyy-MM-dd')}&end_date=${format(endDate, 'yyyy-MM-dd')}&hourly=temperature_2m`
+      );
+
+      if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
+      const data = await response.json();
+
+      const chartData: WeatherDataPoint[] = data.hourly.time.map((time: string, index: number) => ({
+        time: format(new Date(time), 'MMM d HH:mm'),
+        temperature: data.hourly.temperature_2m[index],
+      }));
+
+      localStorage.setItem(cacheKey, JSON.stringify(chartData));
+      setWeatherData(chartData);
+      console.log('Weather data fetched and cached:', chartData);
+    } catch (apiError) {
+      console.warn('API request failed, using mock data:', apiError);
+      const mockData = generateMockWeatherData(startDate, addDays(startDate, 15));
+      setWeatherData(mockData);
+    }
+  } catch (error) {
+    console.error('Error fetching weather data:', error);
+    const mockData = generateMockWeatherData(subDays(new Date(), 15), new Date());
+    setWeatherData(mockData);
+  } finally {
+    setIsLoading(false);
+  }
+}, [latitude, longitude]);
+
+console.log(fetchWeatherData)
 
   useEffect(() => {
     fetchWeatherData();
@@ -193,7 +201,7 @@ export default function Dashboard() {
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <div className="space-y-4">
-              <DataSourceSidebar 
+              <DataSourceSidebar
                 dataSources={dataSources}
                 onDataSourceChange={handleDataSourceChange}
                 onPolygonColorUpdate={handlePolygonColorUpdate}

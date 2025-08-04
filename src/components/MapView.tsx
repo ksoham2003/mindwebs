@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   MapContainer,
   TileLayer,
@@ -27,6 +27,13 @@ export const MapView: React.FC<MapViewProps> = ({
 }) => {
   // Initialize with a new FeatureGroup to ensure it's never null
   const featureGroupRef = useRef<L.FeatureGroup>(new L.FeatureGroup());
+
+  
+// In MapView.tsx
+useEffect(() => {
+  console.log('MapContainer mounted');
+  return () => console.log('MapContainer unmounted');
+}, []);
 
   return (
     <Card className="h-full w-full overflow-hidden relative">
