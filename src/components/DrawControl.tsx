@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
 import * as L from 'leaflet';
 import 'leaflet-draw';
+import 'leaflet-draw/dist/leaflet.draw.css';
 import { PolygonFeature, DataSource, CustomPolygonLayer } from '@/types';
 
 interface DrawControlProps {
@@ -22,8 +23,8 @@ const DrawControl: React.FC<DrawControlProps> = ({
   useEffect(() => {
     if (!map || !featureGroupRef.current) return;
 
-    // Initialize the draw control
-    const drawControl = new (L.Control as any).Draw({
+    // Initialize the draw control with proper types
+    const drawControl = new L.Control.Draw({
       position: 'topright',
       draw: {
         polygon: {
@@ -51,12 +52,11 @@ const DrawControl: React.FC<DrawControlProps> = ({
 
     map.addControl(drawControl);
 
-    const handleCreated = (e: any) => {
-      if (e.layerType !== 'polygon') return;
+    const handleCreated = (e: L.LeafletEvent) => {
+      const layer = (e as L.DrawEvents.Created).layer as L.Polygon;
+      if (!('getLatLngs' in layer)) return;
 
-      const layer = e.layer as L.Polygon;
       const latlngs = layer.getLatLngs()[0] as L.LatLng[];
-
       if (latlngs.length < 3 || latlngs.length > 12) {
         alert('Polygon must have between 3 and 12 points.');
         return;

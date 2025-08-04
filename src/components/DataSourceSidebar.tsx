@@ -5,7 +5,7 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { DataSource } from '@/types';
+import { DataSource, ComparisonOperator } from '@/types';
 
 interface DataSourceSidebarProps {
   dataSources: DataSource[];
@@ -18,29 +18,27 @@ export const DataSourceSidebar: React.FC<DataSourceSidebarProps> = ({
   onDataSourceChange, 
   onPolygonColorUpdate 
 }) => {
-  const [newRuleValue, setNewRuleValue] = useState('');
-  const [newRuleOperator, setNewRuleOperator] = useState('<');
-  const [newRuleColor, setNewRuleColor] = useState('#3b82f6');
-  const [newSourceName, setNewSourceName] = useState('');
-  const [newSourceColor, setNewSourceColor] = useState('#3b82f6');
-  const [newSourceField, setNewSourceField] = useState('temperature_2m');
+  const [newRuleValue, setNewRuleValue] = useState<string>('');
+  const [newRuleOperator, setNewRuleOperator] = useState<ComparisonOperator>('<');
+  const [newRuleColor, setNewRuleColor] = useState<string>('#3b82f6');
+  const [newSourceName, setNewSourceName] = useState<string>('');
+  const [newSourceColor, setNewSourceColor] = useState<string>('#3b82f6');
+  const [newSourceField, setNewSourceField] = useState<string>('temperature_2m');
 
-  const handleAddRule = (sourceId: string) => {
+  const handleAddRule = (sourceId: string): void => {
     const value = parseFloat(newRuleValue);
     if (isNaN(value)) return;
 
     const updated = dataSources.map(source => {
       if (source.id === sourceId) {
+        const newRule = {
+          operator: newRuleOperator,
+          value,
+          color: newRuleColor
+        };
         return {
           ...source,
-          rules: [
-            ...source.rules,
-            {
-              operator: newRuleOperator as '<' | '<=' | '=' | '>=' | '>',
-              value,
-              color: newRuleColor
-            }
-          ].sort((a, b) => a.value - b.value)
+          rules: [...source.rules, newRule].sort((a, b) => a.value - b.value)
         };
       }
       return source;
@@ -51,7 +49,7 @@ export const DataSourceSidebar: React.FC<DataSourceSidebarProps> = ({
     onPolygonColorUpdate();
   };
 
-  const handleRemoveRule = (sourceId: string, index: number) => {
+  const handleRemoveRule = (sourceId: string, index: number): void => {
     const updated = dataSources.map(source => {
       if (source.id === sourceId) {
         return {
@@ -66,7 +64,7 @@ export const DataSourceSidebar: React.FC<DataSourceSidebarProps> = ({
     onPolygonColorUpdate();
   };
 
-  const handleFieldChange = (sourceId: string, field: string) => {
+  const handleFieldChange = (sourceId: string, field: string): void => {
     const updated = dataSources.map(source => {
       if (source.id === sourceId) {
         return { ...source, field };
@@ -77,7 +75,7 @@ export const DataSourceSidebar: React.FC<DataSourceSidebarProps> = ({
     onPolygonColorUpdate();
   };
 
-  const handleAddDataSource = () => {
+  const handleAddDataSource = (): void => {
     if (!newSourceName.trim()) return;
 
     const newSource: DataSource = {
@@ -193,7 +191,7 @@ export const DataSourceSidebar: React.FC<DataSourceSidebarProps> = ({
           </div>
 
           <div className="flex gap-2 mb-2">
-            <Select value={newRuleOperator} onValueChange={setNewRuleOperator}>
+            <Select value={newRuleOperator} onValueChange={(value: ComparisonOperator) => setNewRuleOperator(value)}>
               <SelectTrigger className="w-20">
                 <SelectValue />
               </SelectTrigger>

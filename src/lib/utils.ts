@@ -1,9 +1,8 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { LatLng } from "@/types"
-import { addHours, differenceInHours, format } from 'date-fns'
+import { ColorRule, LatLng } from "@/types"
 
-export function cn(...inputs: ClassValue[]) {
+export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs))
 }
 
@@ -26,7 +25,7 @@ export function formatDate(date: Date | string): string {
 
 export function getColorForValue(
   value: number,
-  rules: { operator: string; value: number; color: string }[]
+  rules: ColorRule[]
 ): string {
   if (!rules || !rules.length) return '#3b82f6';
 
@@ -46,7 +45,7 @@ export function getColorForValue(
   return '#3b82f6';
 }
 
-export function debounce<T extends (...args: any[]) => void>(
+export function debounce<T extends (...args: unknown[]) => void>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {

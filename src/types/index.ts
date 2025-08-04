@@ -3,17 +3,19 @@ export interface LatLng {
   lng: number;
 }
 
+export interface PolygonProperties {
+  createdAt: string;
+  timeRange?: string;
+  color?: string;
+  value?: number;
+}
+
 export interface PolygonFeature {
   id: string;
   paths: LatLng[];
   label: string;
   dataSourceId: string;
-  properties: {
-    createdAt: string;
-    timeRange?: string;
-    color?: string;
-    value?: number;
-  };
+  properties: PolygonProperties;
 }
 
 export interface MapViewProps {
@@ -25,6 +27,7 @@ export interface MapViewProps {
   dataSources: DataSource[];
   mode: 'single' | 'range';
   endDate?: string;
+  onPolygonsUpdate?: (updatedPolygons: PolygonFeature[]) => void;
 }
 
 export type TimeSelectionMode = 'single' | 'range';
@@ -69,16 +72,20 @@ export interface OpenMeteoResponse {
   };
 }
 
+export type ComparisonOperator = '<' | '<=' | '=' | '>=' | '>';
+
+export interface ColorRule {
+  operator: ComparisonOperator;
+  value: number;
+  color: string;
+}
+
 export interface DataSource {
   id: string;
   name: string;
   color: string;
   field: string;
-  rules: {
-    operator: '<' | '<=' | '=' | '>=' | '>';
-    value: number;
-    color: string;
-  }[];
+  rules: ColorRule[];
   isRemovable?: boolean;
 }
 
@@ -88,17 +95,24 @@ declare module 'leaflet' {
   }
 }
 
-import type { Feature, Polygon as GeoJSONPolygon } from 'geojson';
-import * as L from 'leaflet';
+import type { Feature, Polygon as GeoJSONPolygon, GeoJsonProperties } from 'geojson';
+
+type ExtendedProperties = {
+  id: string;
+  createdAt: string;
+  color?: string;
+  dataSourceId?: string;
+  value?: number;
+  label?: string;
+  timeRange?: string;
+};
+
+export type PolygonGeoJSONProperties = GeoJsonProperties & ExtendedProperties;
 
 export interface CustomPolygonLayer extends L.Polygon {
-  feature?: Feature<GeoJSONPolygon, {
-    id: string;
-    createdAt: string;
-    color?: string;
-    dataSourceId?: string;
-    value?: number;
-    label?: string;
-    timeRange?: string;
-  }>;
+  feature?: Feature<GeoJSONPolygon, PolygonGeoJSONProperties>;
+}
+
+export interface CustomPolygonLayer extends L.Polygon {
+  feature?: Feature<GeoJSONPolygon, PolygonGeoJSONProperties>;
 }

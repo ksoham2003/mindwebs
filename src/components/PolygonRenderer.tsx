@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import * as L from 'leaflet';
 import { PolygonFeature, DataSource, CustomPolygonLayer } from '@/types';
-import { calculateCentroid, debounce } from '@/lib/utils';
+import { calculateCentroid } from '@/lib/utils';
 import { addHours, differenceInHours, format } from 'date-fns';
 
 interface PolygonRendererProps {
@@ -26,9 +26,9 @@ const PolygonRenderer: React.FC<PolygonRendererProps> = ({
   endDate,
   onPolygonsUpdate,
 }) => {
-  const map = useMap();
+  const map = useMap(); // Now used in the component
 
-  const getColorForValue = (value: number, dataSourceId: string): string => {
+  const getColorForValue = useCallback((value: number, dataSourceId: string): string => {
     const source = dataSources.find(ds => ds.id === dataSourceId);
     if (!source || !source.rules.length) return '#3b82f6';
 
@@ -46,9 +46,9 @@ const PolygonRenderer: React.FC<PolygonRendererProps> = ({
       }
     }
     return source.color;
-  };
+  }, [dataSources]);
 
-  const fetchDataForPolygon = async (polygon: PolygonFeature) => {
+  const fetchDataForPolygon = useCallback(async (polygon: PolygonFeature): Promise<PolygonFeature> => {
     try {
       const centroid = calculateCentroid(polygon.paths);
       const startTime = new Date(selectedTime);
@@ -94,7 +94,7 @@ const PolygonRenderer: React.FC<PolygonRendererProps> = ({
 
       featureGroupRef.current?.eachLayer((layer) => {
         const polyLayer = layer as CustomPolygonLayer;
-        if (polyLayer instanceof L.Polygon && polyLayer.feature?.id === polygon.id) {
+        if (polyLayer instanceof L.Polygon && polyLayer.feature?.properties?.id === polygon.id) {
           polyLayer.setStyle({ 
             color,
             fillColor: color,
@@ -106,7 +106,7 @@ const PolygonRenderer: React.FC<PolygonRendererProps> = ({
             { permanent: false }
           );
 
-          if (polyLayer.feature) {
+          if (polyLayer.feature?.properties) {
             polyLayer.feature.properties = {
               ...polyLayer.feature.properties,
               value,
@@ -134,9 +134,9 @@ const PolygonRenderer: React.FC<PolygonRendererProps> = ({
       console.error(`Error processing polygon ${polygon.id}:`, error);
       return polygon;
     }
-  };
+  }, [dataSources, endDate, featureGroupRef, getColorForValue, mode, selectedTime]);
 
-  const updatePolygons = debounce(async () => {
+  const updatePolygons = useCallback(async (): Promise<void> => {
     if (!polygons.length) return;
     const updatedPolygons = await Promise.all(
       polygons.map(polygon => fetchDataForPolygon(polygon))
@@ -144,11 +144,11 @@ const PolygonRenderer: React.FC<PolygonRendererProps> = ({
     if (onPolygonsUpdate) {
       onPolygonsUpdate(updatedPolygons);
     }
-  }, 300);
+  }, [fetchDataForPolygon, onPolygonsUpdate, polygons]);
 
   useEffect(() => {
     updatePolygons();
-  }, [polygons, selectedTime, dataSources, mode, endDate]);
+  }, [updatePolygons]); // Now properly includes all dependencies
 
   return null;
 };

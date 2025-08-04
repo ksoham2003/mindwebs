@@ -27,11 +27,6 @@ export const TimelineSlider: React.FC<TimelineSliderProps> = ({ mode, onChange, 
     }
   }, [mode, onChange, totalHours, value]);
 
-  const formatTime = (hours: number): string => {
-    const date = addHours(startDate, hours);
-    return format(date, 'MMM d, HH:mm');
-  };
-
   const handleValueChange = (newValue: number[]) => {
     if (mode === 'single') {
       onChange([newValue[0]]);

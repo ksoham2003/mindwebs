@@ -10,21 +10,9 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import { Card } from './ui/card';
-import { PolygonFeature, DataSource } from '@/types';
+import { MapViewProps } from '@/types';
 import DrawControl from './DrawControl';
 import PolygonRenderer from './PolygonRenderer';
-
-interface MapViewProps {
-  latitude: number;
-  longitude: number;
-  onPolygonComplete: (polygon: PolygonFeature) => void;
-  polygons?: PolygonFeature[];
-  selectedTime: string;
-  dataSources: DataSource[];
-  mode: 'single' | 'range';
-  endDate?: string;
-  onPolygonsUpdate?: (updatedPolygons: PolygonFeature[]) => void;
-}
 
 export const MapView: React.FC<MapViewProps> = ({ 
   latitude, 
@@ -37,7 +25,8 @@ export const MapView: React.FC<MapViewProps> = ({
   endDate,
   onPolygonsUpdate
 }) => {
-  const featureGroupRef = useRef<L.FeatureGroup>(null);
+  // Initialize with a new FeatureGroup to ensure it's never null
+  const featureGroupRef = useRef<L.FeatureGroup>(new L.FeatureGroup());
 
   return (
     <Card className="h-full w-full overflow-hidden relative">

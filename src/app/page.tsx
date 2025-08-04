@@ -25,7 +25,7 @@ export default function Dashboard() {
   const [mode, setMode] = useState<TimeSelectionMode>('single');
   const [polygons, setPolygons] = useState<PolygonFeature[]>([]);
   const [weatherData, setWeatherData] = useState<WeatherDataPoint[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [, setIsLoading] = useState<boolean>(false);
   const [dataSources, setDataSources] = useState<DataSource[]>([
     {
       id: 'open-meteo',
@@ -46,16 +46,14 @@ export default function Dashboard() {
   const MapView = dynamic(() =>
     import('@/components/MapView').then((mod) => mod.MapView), { ssr: false });
 
-  const [latitude,] = useState<number>(22.5726);
-  const [longitude,] = useState<number>(88.3639);
+  const [latitude] = useState<number>(22.5726);
+  const [longitude] = useState<number>(88.3639);
   const now = new Date();
   const startDate = subDays(now, 15);
-  const endDate = addDays(now, 15);
-  const totalHours = differenceInHours(endDate, startDate);
   const selectedTime = addHours(startDate, sliderValue[0]);
   const selectedEndTime = addHours(startDate, sliderValue[sliderValue.length - 1]);
 
-  const fetchWeatherData = useCallback(async () => {
+  const fetchWeatherData = useCallback(async (): Promise<void> => {
     setIsLoading(true);
     try {
       const endDate = new Date();
@@ -104,7 +102,7 @@ export default function Dashboard() {
     fetchWeatherData();
   }, [fetchWeatherData]);
 
-  const handlePolygonComplete = useCallback((polygon: PolygonFeature) => {
+  const handlePolygonComplete = useCallback((polygon: PolygonFeature): void => {
     const polygonWithSource = {
       ...polygon,
       dataSourceId: dataSources[0]?.id || '',
@@ -116,7 +114,7 @@ export default function Dashboard() {
     setPolygons((prev) => [...prev, polygonWithSource]);
   }, [dataSources]);
 
-  const handleDataSourceChange = useCallback((updatedSources: DataSource[]) => {
+  const handleDataSourceChange = useCallback((updatedSources: DataSource[]): void => {
     setDataSources(updatedSources);
     setPolygons(prev => prev.map(polygon => ({
       ...polygon,
@@ -127,11 +125,11 @@ export default function Dashboard() {
     })));
   }, []);
 
-  const handlePolygonColorUpdate = useCallback(() => {
+  const handlePolygonColorUpdate = useCallback((): void => {
     setPolygons(prev => [...prev]);
   }, []);
 
-  const handleSliderChange = useCallback((value: number[]) => {
+  const handleSliderChange = useCallback((value: number[]): void => {
     if (mode === 'single') {
       setSliderValue([value[0]]);
     } else {
@@ -139,7 +137,7 @@ export default function Dashboard() {
     }
   }, [mode]);
 
-  const filteredWeatherData = useCallback(() => {
+  const filteredWeatherData = useCallback((): WeatherDataPoint[] => {
     if (mode === 'single') {
       return weatherData.filter((d) => {
         const date = new Date(d.time);
@@ -155,10 +153,11 @@ export default function Dashboard() {
     }
   }, [mode, weatherData, selectedTime, sliderValue, startDate]);
 
-  const averageTemperature = useCallback(() => {
-    if (filteredWeatherData().length === 0) return null;
-    const sum = filteredWeatherData().reduce((acc, curr) => acc + curr.temperature, 0);
-    return sum / filteredWeatherData().length;
+  const averageTemperature = useCallback((): number | null => {
+    const filteredData = filteredWeatherData();
+    if (filteredData.length === 0) return null;
+    const sum = filteredData.reduce((acc, curr) => acc + curr.temperature, 0);
+    return sum / filteredData.length;
   }, [filteredWeatherData]);
 
   return (
