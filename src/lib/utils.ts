@@ -25,9 +25,10 @@ export function formatDate(date: Date | string): string {
 
 export function getColorForValue(
   value: number,
-  rules: ColorRule[]
+  rules: ColorRule[],
+  defaultColor: string = '#3b82f6'  // Add defaultColor as optional parameter
 ): string {
-  if (!rules || !rules.length) return '#3b82f6';
+  if (!rules || !rules.length) return defaultColor;
 
   const sortedRules = [...rules].sort((a, b) => b.value - a.value);
   
@@ -42,7 +43,7 @@ export function getColorForValue(
       return rule.color;
     }
   }
-  return '#3b82f6';
+  return defaultColor;
 }
 
 export function debounce<T extends (...args: unknown[]) => void>(

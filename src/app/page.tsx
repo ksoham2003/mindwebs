@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { PolygonFeature, TimeSelectionMode, WeatherDataPoint, DataSource } from '@/types';
+import { CurrentTemperatureChart } from '@/components/CurrentTemperatureChart';
 
 const generateMockWeatherData = (startDate: Date, endDate: Date): WeatherDataPoint[] => {
   const hours = differenceInHours(endDate, startDate);
@@ -60,51 +61,52 @@ export default function Dashboard() {
   const selectedEndTime = addHours(startDate, sliderValue[sliderValue.length - 1]);
 
   const fetchWeatherData = useCallback(async (): Promise<void> => {
-  setIsLoading(true);
-  try {
-    const today = new Date();
-    const endDate = subDays(today, 1); // Yesterday (last available date)
-    const startDate = subDays(endDate, 14); // 15-day window
-
-    const cacheKey = `weather-${latitude}-${longitude}-${format(startDate, 'yyyy-MM-dd')}`;
-    const cachedData = localStorage.getItem(cacheKey);
-    
-    if (cachedData) {
-      setWeatherData(JSON.parse(cachedData));
-      return;
-    }
-
+    setIsLoading(true);
     try {
-      const response = await fetch(
-        `https://archive-api.open-meteo.com/v1/archive?latitude=${latitude}&longitude=${longitude}&start_date=${format(startDate, 'yyyy-MM-dd')}&end_date=${format(endDate, 'yyyy-MM-dd')}&hourly=temperature_2m`
-      );
+      const today = new Date();
+      const endDate = subDays(today, 1); // Yesterday (last available date)
+      const startDate = subDays(endDate, 14); // 15-day window
 
-      if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
-      const data = await response.json();
+      const cacheKey = `weather-${latitude}-${longitude}-${format(startDate, 'yyyy-MM-dd')}`;
+      const cachedData = localStorage.getItem(cacheKey);
 
-      const chartData: WeatherDataPoint[] = data.hourly.time.map((time: string, index: number) => ({
-        time: format(new Date(time), 'MMM d HH:mm'),
-        temperature: data.hourly.temperature_2m[index],
-      }));
+      if (cachedData) {
+        setWeatherData(JSON.parse(cachedData));
+        return;
+      }
 
-      localStorage.setItem(cacheKey, JSON.stringify(chartData));
-      setWeatherData(chartData);
-      console.log('Weather data fetched and cached:', chartData);
-    } catch (apiError) {
-      console.warn('API request failed, using mock data:', apiError);
-      const mockData = generateMockWeatherData(startDate, addDays(startDate, 15));
+      try {
+        const response = await fetch(
+          `https://archive-api.open-meteo.com/v1/archive?latitude=${latitude}&longitude=${longitude}&start_date=${format(startDate, 'yyyy-MM-dd')}&end_date=${format(endDate, 'yyyy-MM-dd')}&hourly=temperature_2m,relativehumidity_2m,precipitation`
+        );
+
+        if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
+
+        const data = await response.json();
+        const chartData: WeatherDataPoint[] = data.hourly.time.map((time: string, index: number) => ({
+          time: format(new Date(time), 'MMM d HH:mm'),
+          temperature: data.hourly.temperature_2m[index],
+          humidity: data.hourly.relativehumidity_2m[index],
+          precipitation: data.hourly.precipitation[index]
+        }));
+
+        localStorage.setItem(cacheKey, JSON.stringify(chartData));
+        setWeatherData(chartData);
+      } catch (apiError) {
+        console.warn('API request failed, using mock data:', apiError);
+        const mockData = generateMockWeatherData(startDate, addDays(startDate, 15));
+        setWeatherData(mockData);
+      }
+    } catch (error) {
+      console.error('Error fetching weather data:', error);
+      const mockData = generateMockWeatherData(subDays(new Date(), 15), new Date());
       setWeatherData(mockData);
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error('Error fetching weather data:', error);
-    const mockData = generateMockWeatherData(subDays(new Date(), 15), new Date());
-    setWeatherData(mockData);
-  } finally {
-    setIsLoading(false);
-  }
-}, [latitude, longitude]);
+  }, [latitude, longitude]);
 
-console.log(fetchWeatherData)
+  console.log(fetchWeatherData)
 
   useEffect(() => {
     fetchWeatherData();
@@ -168,6 +170,28 @@ console.log(fetchWeatherData)
     return sum / filteredData.length;
   }, [filteredWeatherData]);
 
+  // In page.tsx
+  // Add these useEffect hooks to page.tsx
+  useEffect(() => {
+    const savedPolygons = localStorage.getItem('saved-polygons');
+    const savedDataSources = localStorage.getItem('saved-data-sources');
+
+    if (savedPolygons) {
+      setPolygons(JSON.parse(savedPolygons));
+    }
+
+    if (savedDataSources) {
+      setDataSources(JSON.parse(savedDataSources));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (polygons.length > 0 || dataSources.length > 1) {
+      localStorage.setItem('saved-polygons', JSON.stringify(polygons));
+      localStorage.setItem('saved-data-sources', JSON.stringify(dataSources));
+    }
+  }, [polygons, dataSources]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
@@ -198,9 +222,9 @@ console.log(fetchWeatherData)
               </div>
             </div>
           </Card>
-
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <div className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            {/* Sidebar - takes 3 columns */}
+            <div className="lg:col-span-3">
               <DataSourceSidebar
                 dataSources={dataSources}
                 onDataSourceChange={handleDataSourceChange}
@@ -208,16 +232,20 @@ console.log(fetchWeatherData)
               />
             </div>
 
-            <div className="lg:col-span-3 space-y-6">
+            {/* Main content area - takes 9 columns */}
+            <div className="lg:col-span-9 space-y-4">
+              {/* Timeline slider full width */}
               <TimelineSlider
                 mode={mode}
                 value={sliderValue}
                 onChange={handleSliderChange}
               />
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-4">
-                  <Card className="p-4">
+              {/* Map and charts in a 2:1 ratio */}
+              <div className="grid grid-cols-1 lg:grid-cols-8 gap-4">
+                {/* Map - takes 2/3 width (5 cols) */}
+                <div className="lg:col-span-5">
+                  <Card className="p-4 h-full">
                     <h2 className="text-xl font-semibold mb-4">Spatial Analysis</h2>
                     <div className="h-[500px]">
                       <MapView
@@ -235,15 +263,8 @@ console.log(fetchWeatherData)
                   </Card>
                 </div>
 
-                <div className="space-y-4">
-                  <DataChart
-                    title={mode === 'single' ? 'Current Temperature' : 'Temperature Range'}
-                    data={filteredWeatherData()}
-                    type={mode === 'single' ? 'bar' : 'line'}
-                    xAxisKey="time"
-                    yAxisKey="temperature"
-                  />
-
+                {/* Charts - takes 1/3 width (3 cols) */}
+                <div className="lg:col-span-3 space-y-4">
                   {mode === 'range' && averageTemperature() !== null && (
                     <Card className="p-4">
                       <h3 className="text-lg font-semibold">Range Summary</h3>
@@ -252,6 +273,12 @@ console.log(fetchWeatherData)
                       </p>
                     </Card>
                   )}
+
+                  <CurrentTemperatureChart
+                    data={weatherData}
+                    startTime={selectedTime}
+                    endTime={mode === 'range' ? selectedEndTime : undefined}
+                  />
                 </div>
               </div>
             </div>

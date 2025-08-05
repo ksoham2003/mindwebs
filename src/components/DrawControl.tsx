@@ -62,10 +62,12 @@ const DrawControl: React.FC<DrawControlProps> = ({
         return;
       }
 
+      const label = prompt("Enter a name for this polygon", "temperature") || "Unnamed Region";
+
       const polygon: PolygonFeature = {
         id: `polygon-${Date.now()}`,
         paths: latlngs.map((p) => ({ lat: p.lat, lng: p.lng })),
-        label: 'temperature',
+        label,
         dataSourceId: dataSources[0]?.id || '',
         properties: {
           createdAt: new Date().toISOString(),

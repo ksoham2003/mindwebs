@@ -83,7 +83,7 @@ export interface ColorRule {
 export interface DataSource {
   id: string;
   name: string;
-  color: string;
+  color: string;  // This property exists and is typed correctly
   field: string;
   rules: ColorRule[];
   isRemovable?: boolean;

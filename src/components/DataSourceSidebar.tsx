@@ -98,6 +98,12 @@ export const DataSourceSidebar: React.FC<DataSourceSidebarProps> = ({
       <h2 className="text-xl font-semibold mb-4">Data Sources</h2>
       
       <div className="mb-6">
+        <Input
+            value={newSourceName}
+            onChange={(e) => setNewSourceName(e.target.value)}
+            placeholder="New source name"
+            className="flex-1"
+          />
         <div className="flex gap-2 mb-2">
           <Input
             value={newSourceName}
