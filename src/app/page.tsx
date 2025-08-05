@@ -3,7 +3,6 @@ import dynamic from 'next/dynamic';
 import { useState, useEffect, useCallback } from 'react';
 import { format, subDays, addHours, differenceInHours, addDays } from 'date-fns';
 import { TimelineSlider } from '@/components/TimeSlider';
-import { DataChart } from '@/components/DataChart';
 import { DataSourceSidebar } from '@/components/DataSourceSidebar';
 import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -28,20 +27,19 @@ export default function Dashboard() {
   const [weatherData, setWeatherData] = useState<WeatherDataPoint[]>([]);
   const [, setIsLoading] = useState<boolean>(false);
   const [dataSources, setDataSources] = useState<DataSource[]>([
-    {
-      id: 'open-meteo',
-      name: 'Open-Meteo Temperature',
-      color: '#3b82f6',
-      field: 'temperature_2m',
-      rules: [
-        { operator: '<', value: 10, color: '#ef4444' },
-        { operator: '<', value: 20, color: '#f59e0b' },
-        { operator: '<', value: 30, color: '#3b82f6' },
-        { operator: '>=', value: 30, color: '#10b981' }
-      ],
-      isRemovable: false
-    }
-  ]);
+  {
+    id: 'open-meteo',
+    name: 'Open-Meteo Temperature',
+    color: '#3b82f6', // default blue
+    field: 'temperature_2m',
+    rules: [
+      { operator: '<', value: 10, color: '#ef4444' }, // red
+      { operator: '<', value: 25, color: '#3b82f6' }, // blue
+      { operator: '>=', value: 25, color: '#10b981' } // green
+    ],
+    isRemovable: false
+  }
+]);
 
   const [sliderValue, setSliderValue] = useState<number[]>([0, 24]);
   const MapView = dynamic(() =>
@@ -53,14 +51,12 @@ export default function Dashboard() {
   const today = new Date();
   const endDate = subDays(today, 1); // Yesterday (last available date)
   const startDate = subDays(endDate, 14); // 15-day window (including endDate)
-
-  // Format dates ensuring they're within valid range
-  const formattedEndDate = format(endDate, 'yyyy-MM-dd');
-  const formattedStartDate = format(startDate, 'yyyy-MM-dd');
   const selectedTime = addHours(startDate, sliderValue[0]);
   const selectedEndTime = addHours(startDate, sliderValue[sliderValue.length - 1]);
 
   const fetchWeatherData = useCallback(async (): Promise<void> => {
+    console.log('Fetching weather data...');
+
     setIsLoading(true);
     try {
       const today = new Date();
@@ -69,6 +65,7 @@ export default function Dashboard() {
 
       const cacheKey = `weather-${latitude}-${longitude}-${format(startDate, 'yyyy-MM-dd')}`;
       const cachedData = localStorage.getItem(cacheKey);
+       console.log('Cache key:', cacheKey);
 
       if (cachedData) {
         setWeatherData(JSON.parse(cachedData));
@@ -92,6 +89,7 @@ export default function Dashboard() {
 
         localStorage.setItem(cacheKey, JSON.stringify(chartData));
         setWeatherData(chartData);
+        console.log('Weather data fetch successful');
       } catch (apiError) {
         console.warn('API request failed, using mock data:', apiError);
         const mockData = generateMockWeatherData(startDate, addDays(startDate, 15));
@@ -106,7 +104,7 @@ export default function Dashboard() {
     }
   }, [latitude, longitude]);
 
-  console.log(fetchWeatherData)
+  
 
   useEffect(() => {
     fetchWeatherData();
@@ -258,6 +256,7 @@ export default function Dashboard() {
                         mode={mode}
                         endDate={selectedEndTime.toISOString()}
                         onPolygonsUpdate={setPolygons}
+                        
                       />
                     </div>
                   </Card>

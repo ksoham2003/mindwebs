@@ -1,3 +1,20 @@
+import 'leaflet';
+import 'leaflet-draw';
+
+declare module 'leaflet' {
+  interface Polygon {
+    editing: {
+      enable(): void;
+      disable(): void;
+    };
+  }
+
+  interface Map {
+    _layers: Record<number, Layer>;
+  }
+}
+
+
 export interface LatLng {
   lat: number;
   lng: number;
@@ -28,6 +45,7 @@ export interface MapViewProps {
   mode: 'single' | 'range';
   endDate?: string;
   onPolygonsUpdate?: (updatedPolygons: PolygonFeature[]) => void;
+  map?: L.Map;
 }
 
 export type TimeSelectionMode = 'single' | 'range';
@@ -89,12 +107,6 @@ export interface DataSource {
   isRemovable?: boolean;
 }
 
-declare module 'leaflet' {
-  interface IconOptions {
-    _getIconUrl?: string;
-  }
-}
-
 import type { Feature, Polygon as GeoJSONPolygon, GeoJsonProperties } from 'geojson';
 
 type ExtendedProperties = {
@@ -116,3 +128,4 @@ export interface CustomPolygonLayer extends L.Polygon {
 export interface CustomPolygonLayer extends L.Polygon {
   feature?: Feature<GeoJSONPolygon, PolygonGeoJSONProperties>;
 }
+

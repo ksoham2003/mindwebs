@@ -1,7 +1,6 @@
 'use client';
-
-import React, { useEffect } from 'react';
-import { format, subDays, addDays, differenceInHours, addHours } from 'date-fns';
+import React, { useEffect, useState } from 'react';
+import { format, subDays, addDays, differenceInHours, addHours, isSameDay } from 'date-fns';
 import { Slider } from './ui/slider';
 import { Card } from './ui/card';
 
@@ -12,20 +11,20 @@ interface TimelineSliderProps {
 }
 
 export const TimelineSlider: React.FC<TimelineSliderProps> = ({ mode, onChange, value }) => {
-  const now = new Date();
+  const [now, setNow] = useState<Date | null>(null);
+  
+  useEffect(() => {
+    setNow(new Date()); // Client-side only initialization
+  }, []);
+
+  if (!now) return <div className="p-4 h-[180px]" />; // Loading placeholder
+
   const startDate = subDays(now, 15);
   const endDate = addDays(now, 15);
   const totalHours = differenceInHours(endDate, startDate);
 
-  const tickMarks = Array.from({ length: 6 }, (_, i) => i * 3 * 24);
-
-  useEffect(() => {
-    if (mode === 'range' && value.length === 1) {
-      onChange([value[0], Math.min(value[0] + 24, totalHours)]);
-    } else if (mode === 'single' && value.length > 1) {
-      onChange([value[0]]);
-    }
-  }, [mode, onChange, totalHours, value]);
+  // Generate tick marks every 5 days
+  const tickMarks = Array.from({ length: 7 }, (_, i) => i * 5 * 24);
 
   const handleValueChange = (newValue: number[]) => {
     if (mode === 'single') {
@@ -58,26 +57,47 @@ export const TimelineSlider: React.FC<TimelineSliderProps> = ({ mode, onChange, 
         </div>
 
         <div className="relative">
+          {/* Main Slider */}
           <Slider
             min={0}
             max={totalHours}
-            step={1}
+            step={1} 
             value={mode === 'single' ? [value[0]] : value}
             onValueChange={handleValueChange}
-            minStepsBetweenThumbs={mode === 'single' ? 0 : 1}
-            className="w-full"
+            minStepsBetweenThumbs={1}
+            className="w-full [&>span:first-child]:h-2"
           />
 
+          {/* Current Selection Indicator */}
+          {mode === 'single' && (
+            <div 
+              className="absolute top-0 h-2 bg-primary rounded-full"
+              style={{
+                left: `${(value[0] / totalHours) * 100}%`,
+                width: '2px'
+              }}
+            />
+          )}
+
+          {/* Date Tick Marks */}
           <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-            {tickMarks.map((hour) => (
-              <div key={hour} className="flex flex-col items-center">
-                <span>{format(addHours(startDate, hour), 'MMM d')}</span>
-                <span className="mt-1 w-px h-2 bg-border" />
-              </div>
-            ))}
+            {tickMarks.map((hours, index) => {
+              const date = addHours(startDate, hours);
+              const isToday = isSameDay(date, now);
+              return (
+                <div key={index} className="flex flex-col items-center">
+                  <span className={isToday ? "font-bold text-primary" : ""}>
+                    {format(date, 'MMM d')}
+                    {isToday && " (Today)"}
+                  </span>
+                  <span className="mt-1 w-px h-2 bg-border" />
+                </div>
+              );
+            })}
           </div>
         </div>
 
+        {/* Time Navigation Buttons */}
         <div className="flex gap-2">
           <button
             onClick={() => onChange(mode === 'single' 

@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { DataSource, ComparisonOperator } from '@/types';
+import { Plus, Minus, Trash2 } from 'lucide-react';
 
 interface DataSourceSidebarProps {
   dataSources: DataSource[];
@@ -25,29 +26,30 @@ export const DataSourceSidebar: React.FC<DataSourceSidebarProps> = ({
   const [newSourceColor, setNewSourceColor] = useState<string>('#3b82f6');
   const [newSourceField, setNewSourceField] = useState<string>('temperature_2m');
 
-  const handleAddRule = (sourceId: string): void => {
-    const value = parseFloat(newRuleValue);
-    if (isNaN(value)) return;
+  // In DataSourceSidebar.tsx
+const handleAddRule = (sourceId: string): void => {
+  const value = parseFloat(newRuleValue);
+  if (isNaN(value)) return;
 
-    const updated = dataSources.map(source => {
-      if (source.id === sourceId) {
-        const newRule = {
-          operator: newRuleOperator,
-          value,
-          color: newRuleColor
-        };
-        return {
-          ...source,
-          rules: [...source.rules, newRule].sort((a, b) => a.value - b.value)
-        };
-      }
-      return source;
-    });
+  const updated = dataSources.map(source => {
+    if (source.id === sourceId) {
+      const newRule = {
+        operator: newRuleOperator,
+        value,
+        color: newRuleColor
+      };
+      return {
+        ...source,
+        rules: [...source.rules, newRule].sort((a, b) => a.value - b.value)
+      };
+    }
+    return source;
+  });
 
-    onDataSourceChange(updated);
-    setNewRuleValue('');
-    onPolygonColorUpdate();
-  };
+  onDataSourceChange(updated);
+  setNewRuleValue('');
+  onPolygonColorUpdate(); // This should trigger polygon updates
+};
 
   const handleRemoveRule = (sourceId: string, index: number): void => {
     const updated = dataSources.map(source => {
@@ -93,22 +95,26 @@ export const DataSourceSidebar: React.FC<DataSourceSidebarProps> = ({
     setNewSourceField('temperature_2m');
   };
 
+  const handleRemoveDataSource = (sourceId: string): void => {
+    if (dataSources.find(ds => ds.id === sourceId)?.isRemovable === false) {
+      return; // Prevent removal of mandatory sources
+    }
+    onDataSourceChange(dataSources.filter(ds => ds.id !== sourceId));
+    onPolygonColorUpdate();
+  };
+
   return (
     <Card className="p-4 h-full overflow-y-auto">
       <h2 className="text-xl font-semibold mb-4">Data Sources</h2>
       
-      <div className="mb-6">
-        <Input
-            value={newSourceName}
-            onChange={(e) => setNewSourceName(e.target.value)}
-            placeholder="New source name"
-            className="flex-1"
-          />
-        <div className="flex gap-2 mb-2">
+      {/* Add New Data Source Section */}
+      <div className="mb-6 space-y-2">
+        <h3 className="text-sm font-medium">Add New Data Source</h3>
+        <div className="flex gap-2">
           <Input
             value={newSourceName}
             onChange={(e) => setNewSourceName(e.target.value)}
-            placeholder="New source name"
+            placeholder="Source name"
             className="flex-1"
           />
           <Input
@@ -117,8 +123,10 @@ export const DataSourceSidebar: React.FC<DataSourceSidebarProps> = ({
             onChange={(e) => setNewSourceColor(e.target.value)}
             className="w-10 h-10"
           />
+        </div>
+        <div className="flex gap-2">
           <Select value={newSourceField} onValueChange={setNewSourceField}>
-            <SelectTrigger className="w-32">
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="Field" />
             </SelectTrigger>
             <SelectContent>
@@ -127,114 +135,135 @@ export const DataSourceSidebar: React.FC<DataSourceSidebarProps> = ({
               <SelectItem value="precipitation">Precipitation</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={handleAddDataSource}>
-            Add Source
+          <Button onClick={handleAddDataSource} className="gap-1">
+            <Plus size={16} />
+            Add
           </Button>
         </div>
       </div>
 
-      {dataSources.map(source => (
-        <div key={source.id} className="mb-6 border-b pb-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center">
-              <div 
-                className="w-4 h-4 rounded-full mr-2" 
-                style={{ backgroundColor: source.color }}
-              />
-              <h3 className="font-medium">{source.name}</h3>
-            </div>
-            {source.isRemovable !== false && (
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => onDataSourceChange(dataSources.filter(s => s.id !== source.id))}
-              >
-                Remove
-              </Button>
-            )}
-          </div>
-
-          <div className="mb-2">
-            <Select 
-              value={source.field}
-              onValueChange={(value) => handleFieldChange(source.id, value)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select field" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="temperature_2m">Temperature</SelectItem>
-                <SelectItem value="relativehumidity_2m">Humidity</SelectItem>
-                <SelectItem value="precipitation">Precipitation</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2 mb-4">
-            {source.rules.length === 0 && (
-              <p className="text-sm text-muted-foreground">No rules defined</p>
-            )}
-            {source.rules.map((rule, i) => (
-              <div key={i} className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div 
-                    className="w-3 h-3 rounded-full mr-2" 
-                    style={{ backgroundColor: rule.color }}
-                  />
-                  <span className="text-sm">
-                    {rule.operator} {rule.value} → {rule.color}
-                  </span>
-                </div>
+      {/* Data Sources List */}
+      <div className="space-y-4">
+        {dataSources.map(source => (
+          <div key={source.id} className="border rounded-lg p-3">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center">
+                <div 
+                  className="w-4 h-4 rounded-full mr-2" 
+                  style={{ backgroundColor: source.color }}
+                />
+                <h3 className="font-medium">{source.name}</h3>
+              </div>
+              {source.isRemovable !== false && (
                 <Button 
                   variant="ghost" 
                   size="sm"
-                  onClick={() => handleRemoveRule(source.id, i)}
+                  onClick={() => handleRemoveDataSource(source.id)}
+                  className="text-red-500 hover:text-red-700"
                 >
-                  ×
+                  <Trash2 size={16} />
+                </Button>
+              )}
+            </div>
+
+            {/* Field Selection */}
+            <div className="mb-3">
+              <label className="block text-sm font-medium mb-1">Field</label>
+              <Select 
+                value={source.field}
+                onValueChange={(value) => handleFieldChange(source.id, value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select field" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="temperature_2m">Temperature</SelectItem>
+                  <SelectItem value="relativehumidity_2m">Humidity</SelectItem>
+                  <SelectItem value="precipitation">Precipitation</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Color Rules */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium">Color Rules</label>
+              
+              {source.rules.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No rules defined</p>
+              ) : (
+                <div className="space-y-1">
+                  {source.rules.map((rule, i) => (
+                    <div key={i} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                      <div className="flex items-center">
+                        <div 
+                          className="w-3 h-3 rounded-full mr-2" 
+                          style={{ backgroundColor: rule.color }}
+                        />
+                        <span className="text-sm">
+                          {rule.operator} {rule.value}
+                        </span>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleRemoveRule(source.id, i)}
+                        className="text-red-500 hover:text-red-700 h-6 w-6 p-0"
+                      >
+                        <Minus size={14} />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add New Rule Form */}
+              <div className="pt-2">
+                <div className="flex gap-2 mb-2">
+                  <Select 
+                    value={newRuleOperator} 
+                    onValueChange={(value: ComparisonOperator) => setNewRuleOperator(value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="<">{'<'}</SelectItem>
+                      <SelectItem value="<=">{'<='}</SelectItem>
+                      <SelectItem value="=">{'='}</SelectItem>
+                      <SelectItem value=">=">{'>='}</SelectItem>
+                      <SelectItem value=">">{'>'}</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Input
+                    type="number"
+                    value={newRuleValue}
+                    onChange={(e) => setNewRuleValue(e.target.value)}
+                    placeholder="Value"
+                    className="w-20"
+                  />
+
+                  <Input
+                    type="color"
+                    value={newRuleColor}
+                    onChange={(e) => setNewRuleColor(e.target.value)}
+                    className="w-10 h-10"
+                  />
+                </div>
+
+                <Button
+                  size="sm"
+                  onClick={() => handleAddRule(source.id)}
+                  className="w-full gap-1"
+                >
+                  <Plus size={14} />
+                  Add Rule
                 </Button>
               </div>
-            ))}
+            </div>
           </div>
-
-          <div className="flex gap-2 mb-2">
-            <Select value={newRuleOperator} onValueChange={(value: ComparisonOperator) => setNewRuleOperator(value)}>
-              <SelectTrigger className="w-20">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="<">{'<'}</SelectItem>
-                <SelectItem value="<=">{'<='}</SelectItem>
-                <SelectItem value="=">{'='}</SelectItem>
-                <SelectItem value=">=">{'>='}</SelectItem>
-                <SelectItem value=">">{'>'}</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Input
-              type="number"
-              value={newRuleValue}
-              onChange={(e) => setNewRuleValue(e.target.value)}
-              placeholder="Value"
-              className="w-24"
-            />
-
-            <Input
-              type="color"
-              value={newRuleColor}
-              onChange={(e) => setNewRuleColor(e.target.value)}
-              className="w-10 h-10"
-            />
-          </div>
-
-          <Button
-            size="sm"
-            onClick={() => handleAddRule(source.id)}
-            className="w-full"
-          >
-            Add Rule
-          </Button>
-        </div>
-      ))}
+        ))}
+      </div>
     </Card>
   );
 };

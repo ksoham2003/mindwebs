@@ -1,9 +1,10 @@
 'use client';
 import { useEffect, useCallback } from 'react';
 import * as L from 'leaflet';
+import 'leaflet-draw';
 import { calculateCentroid } from '@/lib/utils';
-import { format, addHours, differenceInHours } from 'date-fns';
-import { PolygonFeature, DataSource, CustomPolygonLayer, ColorRule } from '@/types';
+import { format } from 'date-fns';
+import { PolygonFeature, DataSource, ColorRule, CustomPolygonLayer } from '@/types';
 
 interface PolygonRendererProps {
   polygons: PolygonFeature[];
@@ -23,8 +24,7 @@ const PolygonRenderer: React.FC<PolygonRendererProps> = ({
   featureGroupRef,
   mode,
   endDate,
-  onPolygonsUpdate,
-  map
+  onPolygonsUpdate
 }) => {
   const getColorForValue = useCallback((
     value: number,
@@ -48,166 +48,92 @@ const PolygonRenderer: React.FC<PolygonRendererProps> = ({
     return defaultColor;
   }, []);
 
-  const updatePolygonData = useCallback(async (polygon: PolygonFeature): Promise<PolygonFeature> => {
-    try {
-      if (!polygon.paths || polygon.paths.length < 3) {
-        console.warn('Invalid polygon structure', polygon);
-        return polygon;
-      }
+  // In PolygonRenderer.tsx
+const updatePolygonData = useCallback(async (polygon: PolygonFeature): Promise<PolygonFeature> => {
+  console.log('Starting polygon data update for:', polygon.id);
+  try {
+    const centroid = calculateCentroid(polygon.paths);
+    
+    console.log('Calculated centroid:', centroid);
+    const startTime = new Date(selectedTime);
+    const endTime = mode === 'range' && endDate ? new Date(endDate) : startTime;
+console.log('Time range:', { startTime, endTime, mode });
+    const source = dataSources.find(ds => ds.id === polygon.dataSourceId);
+    console.log('Found data source:', source?.name || 'Not found');
+    if (!source) return polygon;
 
-      const centroid = calculateCentroid(polygon.paths);
-      const startTime = new Date(selectedTime);
-      const endTime = mode === 'range' && endDate ? new Date(endDate) : startTime;
+    // Fetch temperature data
+    const response = await fetch(
+      `https://archive-api.open-meteo.com/v1/archive?latitude=${centroid.lat}&longitude=${centroid.lng}&start_date=${format(startTime, 'yyyy-MM-dd')}&end_date=${format(endTime, 'yyyy-MM-dd')}&hourly=temperature_2m`
+    );
+    console.log('Fetching from:', response.url);
 
-      if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
-        console.error('Invalid start or end time');
-        return polygon;
-      }
-
-      const hours = differenceInHours(endTime, startTime);
-      const timePoints = Array.from({ length: hours + 1 }, (_, i) => addHours(startTime, i));
-
-      const values: number[] = [];
-      let failedRequests = 0;
-      const MAX_FAILED_REQUESTS = 3;
-
-      for (const timePoint of timePoints) {
-        if (isNaN(timePoint.getTime())) {
-          console.warn('Invalid time point:', timePoint);
-          continue;
-        }
-
-        const cacheKey = `polygon-${centroid.lat}-${centroid.lng}-${format(timePoint, 'yyyy-MM-dd-HH')}`;
-        const cachedData = localStorage.getItem(cacheKey);
-
-        if (cachedData) {
-          try {
-            const parsedData = JSON.parse(cachedData);
-            if (typeof parsedData.value === 'number') {
-              values.push(parsedData.value);
-              continue;
-            }
-          } catch (e) {
-            console.warn('Invalid cache data for', cacheKey);
-          }
-        }
-
-        if (failedRequests >= MAX_FAILED_REQUESTS) {
-          console.warn('Max failed requests reached, skipping');
-          break;
-        }
-
-        try {
-          const response = await fetch(
-            `https://archive-api.open-meteo.com/v1/archive?latitude=${centroid.lat}&longitude=${centroid.lng}&start_date=${format(timePoint, 'yyyy-MM-dd')}&end_date=${format(timePoint, 'yyyy-MM-dd')}&hourly=temperature_2m`
-          );
-
-          if (!response.ok) {
-            console.error('API request failed', response.status);
-            failedRequests++;
-            continue;
-          }
-
-          const data = await response.json();
-          if (!data?.hourly?.time || !Array.isArray(data.hourly.time)) {
-            console.error('Invalid API response');
-            failedRequests++;
-            continue;
-          }
-
-          const hourIndex = data.hourly.time.findIndex((t: string) => {
-            try {
-              return new Date(t).getTime() === timePoint.getTime();
-            } catch {
-              return false;
-            }
-          });
-
-          if (hourIndex !== -1 && data.hourly.temperature_2m?.[hourIndex] !== undefined) {
-            const value = data.hourly.temperature_2m[hourIndex];
-            if (typeof value === 'number') {
-              values.push(value);
-              try {
-                localStorage.setItem(cacheKey, JSON.stringify({ value }));
-              } catch (e) {
-                console.warn('Failed to cache data', e);
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Failed to fetch data for time point', timePoint, error);
-          failedRequests++;
-        }
-      }
-
-      if (values.length === 0) {
-        console.warn('No valid data found for polygon', polygon.id);
-        return polygon;
-      }
-
-      const value = mode === 'range'
-        ? values.reduce((sum, val) => sum + val, 0) / values.length
-        : values[0];
-
-      const source = dataSources.find(ds => ds.id === polygon.dataSourceId);
-      const color = source
-        ? getColorForValue(value, source.rules, source.color)
-        : '#3b82f6';
-
-      if (featureGroupRef.current) {
-        featureGroupRef.current.eachLayer((layer: L.Layer) => {
-          try {
-            const polyLayer = layer as CustomPolygonLayer;
-            if (polyLayer.feature?.properties?.id === polygon.id) {
-              polyLayer.setStyle({ color, fillColor: color, fillOpacity: 0.4 });
-
-              const tooltipContent = `${polygon.label || 'Region'}\n${mode === 'range' ? `Avg: ${value.toFixed(1)} (${values.length} hrs)` : `Value: ${value.toFixed(1)}`}`;
-              polyLayer.unbindTooltip();
-              polyLayer.bindTooltip(tooltipContent, {
-                permanent: true,
-                direction: 'center',
-                className: 'bg-white text-black rounded px-2 py-1 text-xs',
-              });
-
-              // Editable label
-              polyLayer.on('click', () => {
-                const newLabel = prompt("Edit polygon label:", polygon.label);
-                if (newLabel) {
-                  polygon.label = newLabel;
-                  polyLayer.unbindTooltip();
-                  polyLayer.bindTooltip(`${newLabel}\n${mode === 'range' ? `Avg: ${value.toFixed(1)}` : `Value: ${value.toFixed(1)}`}`, {
-                    permanent: true,
-                    direction: 'center',
-                    className: 'bg-white text-black rounded px-2 py-1 text-xs',
-                  });
-                  onPolygonsUpdate?.(
-                    polygons.map(p => p.id === polygon.id ? { ...p, label: newLabel } : p)
-                  );
-                }
-              });
-            }
-          } catch (e) {
-            console.error('Error updating polygon layer', e);
-          }
-        });
-      }
-
-      return {
-        ...polygon,
-        properties: {
-          ...polygon.properties,
-          value,
-          color,
-          timeRange: mode === 'range'
-            ? `${format(startTime, 'MMM d HH:mm')} - ${format(endTime, 'MMM d HH:mm')}`
-            : undefined
-        }
-      };
-    } catch (error) {
-      console.error('Update failed:', error);
+    if (!response.ok) {
+      console.error('API request failed', response.status);
       return polygon;
     }
-  }, [selectedTime, mode, endDate, dataSources, getColorForValue]);
+
+    const data = await response.json();
+    const temperatures = data.hourly.temperature_2m;
+    const times = data.hourly.time;
+
+    // Get values for our time range
+    const values = times.map((timeStr: string, i: number) => {
+  const time = new Date(timeStr);
+  return time >= startTime && time <= endTime ? temperatures[i] : null;
+}).filter((v: number | null): v is number => v !== null);
+  console.log('Filtered values:', values);
+    if (values.length === 0) {
+      console.warn('No data for time range');
+      return polygon;
+    }
+
+    // Calculate value (single or average)
+    const value = mode === 'range' 
+  ? values.reduce((sum: number, v: number) => sum + v, 0) / values.length 
+  : values[0];
+console.log('Filtered values:', values);
+    // Get color based on rules
+    const color = getColorForValue(value, source.rules, source.color);
+
+    // Update polygon appearance
+    if (featureGroupRef.current) {
+      featureGroupRef.current.eachLayer((layer: L.Layer) => {
+        const polyLayer = layer as CustomPolygonLayer;
+        if (polyLayer.feature?.properties?.id === polygon.id) {
+          polyLayer.setStyle({
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.4
+          });
+
+          // Update tooltip
+          const tooltipContent = `${polygon.label}\n${value.toFixed(1)}°C`;
+          polyLayer.unbindTooltip();
+          polyLayer.bindTooltip(tooltipContent, {
+            permanent: true,
+            direction: 'center'
+          });
+        }
+      });
+    }
+
+    return {
+      ...polygon,
+      properties: {
+        ...polygon.properties,
+        value,
+        color,
+        timeRange: mode === 'range' 
+          ? `${format(startTime, 'MMM d HH:mm')} - ${format(endTime, 'MMM d HH:mm')}`
+          : undefined
+      }
+    };
+  } catch (error) {
+    console.error('Error updating polygon:', error);
+    return polygon;
+  }
+}, [selectedTime, mode, endDate, dataSources, getColorForValue, featureGroupRef]);
 
   useEffect(() => {
     if (!featureGroupRef.current || !polygons.length) return;
@@ -216,6 +142,42 @@ const PolygonRenderer: React.FC<PolygonRendererProps> = ({
       (p): p is PolygonFeature => !!p && Array.isArray(p.paths)
     );
     if (validPolygons.length === 0) return;
+
+    const initEditHandlers = () => {
+      const group = featureGroupRef.current;
+      if (!group) return;
+
+      group.eachLayer((layer: L.Layer) => {
+        const polyLayer = layer as CustomPolygonLayer;
+
+        if (polyLayer.editing) {
+          polyLayer.editing.enable();
+
+          polyLayer.on('edit', () => {
+            const latlngs = polyLayer.getLatLngs()[0] as L.LatLng[];
+            if (latlngs.length < 3 || latlngs.length > 12) {
+              alert('Polygon must have between 3 and 12 points.');
+              return;
+            }
+
+            const feature = polyLayer.feature;
+            if (!feature?.properties?.id) return;
+
+            const updatedPolygons = polygons.map(p => {
+              if (p.id === feature.properties.id) {
+                return {
+                  ...p,
+                  paths: latlngs.map(ll => ({ lat: ll.lat, lng: ll.lng }))
+                };
+              }
+              return p;
+            });
+
+            onPolygonsUpdate?.(updatedPolygons);
+          });
+        }
+      });
+    };
 
     const updateAll = async () => {
       try {
@@ -231,18 +193,31 @@ const PolygonRenderer: React.FC<PolygonRendererProps> = ({
 
         if (hasChanged) {
           onPolygonsUpdate?.(
-            polygons.map(p =>
-              updated.find(u => u.id === p?.id) || p
-            )
+            polygons.map(p => updated.find(u => u.id === p.id) || p)
           );
         }
+
+        initEditHandlers();
       } catch (error) {
         console.error('Error updating polygons:', error);
       }
     };
 
     updateAll();
-  }, [selectedTime, endDate, mode, polygons, updatePolygonData, onPolygonsUpdate]);
+
+    const group = featureGroupRef.current;
+    return () => {
+      if (group) {
+        group.eachLayer((layer: L.Layer) => {
+          const polyLayer = layer as CustomPolygonLayer;
+          if (polyLayer.editing) {
+            polyLayer.off('edit');
+            polyLayer.editing.disable();
+          }
+        });
+      }
+    };
+  }, [selectedTime, endDate, mode, polygons, updatePolygonData, onPolygonsUpdate, featureGroupRef]);
 
   return null;
 };
