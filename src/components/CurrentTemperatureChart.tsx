@@ -1,11 +1,6 @@
-
-import React from "react";
+'use client';
 import { DataChart } from "@/components/DataChart";
-
-interface WeatherDataPoint {
-  time: string;
-  temperature: number;
-}
+import { WeatherDataPoint } from "@/types";
 
 interface Props {
   data: WeatherDataPoint[];
@@ -16,7 +11,6 @@ interface Props {
 export const CurrentTemperatureChart: React.FC<Props> = ({ data, startTime, endTime }) => {
   if (!data || !data.length) return <div>No temperature data available</div>;
 
-  // Filter data based on time range if provided
   const filteredData = startTime && endTime
     ? data.filter(d => {
         const date = new Date(d.time);

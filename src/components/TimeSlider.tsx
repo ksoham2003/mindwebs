@@ -14,16 +14,15 @@ export const TimelineSlider: React.FC<TimelineSliderProps> = ({ mode, onChange, 
   const [now, setNow] = useState<Date | null>(null);
   
   useEffect(() => {
-    setNow(new Date()); // Client-side only initialization
+    setNow(new Date()); 
   }, []);
 
-  if (!now) return <div className="p-4 h-[180px]" />; // Loading placeholder
+  if (!now) return <div className="p-4 h-[180px]" />; 
 
   const startDate = subDays(now, 15);
   const endDate = addDays(now, 15);
   const totalHours = differenceInHours(endDate, startDate);
 
-  // Generate tick marks every 5 days
   const tickMarks = Array.from({ length: 7 }, (_, i) => i * 5 * 24);
 
   const handleValueChange = (newValue: number[]) => {
@@ -57,7 +56,6 @@ export const TimelineSlider: React.FC<TimelineSliderProps> = ({ mode, onChange, 
         </div>
 
         <div className="relative">
-          {/* Main Slider */}
           <Slider
             min={0}
             max={totalHours}
@@ -68,7 +66,6 @@ export const TimelineSlider: React.FC<TimelineSliderProps> = ({ mode, onChange, 
             className="w-full [&>span:first-child]:h-2"
           />
 
-          {/* Current Selection Indicator */}
           {mode === 'single' && (
             <div 
               className="absolute top-0 h-2 bg-primary rounded-full"
@@ -79,7 +76,6 @@ export const TimelineSlider: React.FC<TimelineSliderProps> = ({ mode, onChange, 
             />
           )}
 
-          {/* Date Tick Marks */}
           <div className="flex justify-between mt-2 text-xs text-muted-foreground">
             {tickMarks.map((hours, index) => {
               const date = addHours(startDate, hours);
@@ -97,7 +93,6 @@ export const TimelineSlider: React.FC<TimelineSliderProps> = ({ mode, onChange, 
           </div>
         </div>
 
-        {/* Time Navigation Buttons */}
         <div className="flex gap-2">
           <button
             onClick={() => onChange(mode === 'single' 

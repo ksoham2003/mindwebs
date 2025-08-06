@@ -14,7 +14,6 @@ declare module 'leaflet' {
   }
 }
 
-
 export interface LatLng {
   lat: number;
   lng: number;
@@ -25,6 +24,12 @@ export interface PolygonProperties {
   timeRange?: string;
   color?: string;
   value?: number;
+  lastUpdated?: string;
+}
+
+export interface TimeRange {
+  start: Date;
+  end: Date;
 }
 
 export interface PolygonFeature {
@@ -33,6 +38,12 @@ export interface PolygonFeature {
   label: string;
   dataSourceId: string;
   properties: PolygonProperties;
+}
+
+export interface ColorRule {
+  operator: ComparisonOperator;
+  value: number;
+  color: string;
 }
 
 export interface MapViewProps {
@@ -59,6 +70,8 @@ export interface TimeSliderProps {
 export interface WeatherDataPoint {
   time: string;
   temperature: number;
+  humidity?: number;
+  precipitation?: number;
 }
 
 export type ChartType = 'bar' | 'line' | 'area';
@@ -83,10 +96,14 @@ export interface OpenMeteoResponse {
   hourly_units: {
     time: string;
     temperature_2m: string;
+    relativehumidity_2m?: string;
+    precipitation?: string;
   };
   hourly: {
     time: string[];
     temperature_2m: number[];
+    relativehumidity_2m?: number[];
+    precipitation?: number[];
   };
 }
 
@@ -101,7 +118,7 @@ export interface ColorRule {
 export interface DataSource {
   id: string;
   name: string;
-  color: string;  // This property exists and is typed correctly
+  color: string;
   field: string;
   rules: ColorRule[];
   isRemovable?: boolean;
@@ -125,7 +142,31 @@ export interface CustomPolygonLayer extends L.Polygon {
   feature?: Feature<GeoJSONPolygon, PolygonGeoJSONProperties>;
 }
 
-export interface CustomPolygonLayer extends L.Polygon {
-  feature?: Feature<GeoJSONPolygon, PolygonGeoJSONProperties>;
+
+export interface WeatherApiResponse {
+  latitude: number;
+  longitude: number;
+  generationtime_ms: number;
+  hourly: {
+    time: string[];
+    temperature_2m?: number[];
+    relativehumidity_2m?: number[];
+    precipitation?: number[];
+  };
 }
 
+export interface AirQualityData {
+  aqi: number;
+  pm2_5: number;
+  pm10: number;
+}
+
+export interface DataSource {
+  id: string;
+  name: string;
+  color: string;
+  field: string;
+  rules: ColorRule[];
+  isRemovable?: boolean;
+  apiType?: 'weather' | 'air-quality';
+}

@@ -26,7 +26,6 @@ export const DataChart: React.FC<DataChartProps> = ({
   yAxisKey,
   color = '#3b82f6',
 }) => {
-  // Render the appropriate chart based on type
   const renderChart = () => {
     switch (type) {
       case 'line':

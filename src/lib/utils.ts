@@ -18,6 +18,7 @@ export function calculateCentroid(paths: LatLng[]): LatLng {
   };
 }
 
+
 export function formatDate(date: Date | string): string {
   const d = new Date(date);
   return d.toISOString().split('T')[0];
@@ -26,12 +27,11 @@ export function formatDate(date: Date | string): string {
 export function getColorForValue(
   value: number,
   rules: ColorRule[],
-  defaultColor: string = '#3b82f6'  // Add defaultColor as optional parameter
+  defaultColor: string = '#3b82f6'
 ): string {
   if (!rules || !rules.length) return defaultColor;
 
   const sortedRules = [...rules].sort((a, b) => b.value - a.value);
-  
   for (const rule of sortedRules) {
     if (
       (rule.operator === '<' && value < rule.value) ||
@@ -45,7 +45,6 @@ export function getColorForValue(
   }
   return defaultColor;
 }
-
 export function debounce<T extends (...args: unknown[]) => void>(
   func: T,
   wait: number

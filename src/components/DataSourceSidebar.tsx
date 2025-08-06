@@ -1,24 +1,16 @@
-'use client';
 
+'use client';
 import React, { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { DataSource, ComparisonOperator } from '@/types';
 import { Plus, Minus, Trash2 } from 'lucide-react';
+import { useAppStore } from '@/lib/store';
+import type { DataSource, ColorRule, ComparisonOperator } from '@/types';
 
-interface DataSourceSidebarProps {
-  dataSources: DataSource[];
-  onDataSourceChange: (updatedSources: DataSource[]) => void;
-  onPolygonColorUpdate: () => void;
-}
-
-export const DataSourceSidebar: React.FC<DataSourceSidebarProps> = ({ 
-  dataSources, 
-  onDataSourceChange, 
-  onPolygonColorUpdate 
-}) => {
+export const DataSourceSidebar = () => {
+  const { dataSources, setDataSources } = useAppStore();
   const [newRuleValue, setNewRuleValue] = useState<string>('');
   const [newRuleOperator, setNewRuleOperator] = useState<ComparisonOperator>('<');
   const [newRuleColor, setNewRuleColor] = useState<string>('#3b82f6');
@@ -26,32 +18,30 @@ export const DataSourceSidebar: React.FC<DataSourceSidebarProps> = ({
   const [newSourceColor, setNewSourceColor] = useState<string>('#3b82f6');
   const [newSourceField, setNewSourceField] = useState<string>('temperature_2m');
 
-  // In DataSourceSidebar.tsx
-const handleAddRule = (sourceId: string): void => {
-  const value = parseFloat(newRuleValue);
-  if (isNaN(value)) return;
+  const handleAddRule = (sourceId: string) => {
+    const value = parseFloat(newRuleValue);
+    if (isNaN(value)) return;
 
-  const updated = dataSources.map(source => {
-    if (source.id === sourceId) {
-      const newRule = {
-        operator: newRuleOperator,
-        value,
-        color: newRuleColor
-      };
-      return {
-        ...source,
-        rules: [...source.rules, newRule].sort((a, b) => a.value - b.value)
-      };
-    }
-    return source;
-  });
+    const updated = dataSources.map(source => {
+      if (source.id === sourceId) {
+        const newRule: ColorRule = {
+          operator: newRuleOperator,
+          value,
+          color: newRuleColor
+        };
+        return {
+          ...source,
+          rules: [...source.rules, newRule].sort((a, b) => a.value - b.value)
+        };
+      }
+      return source;
+    });
 
-  onDataSourceChange(updated);
-  setNewRuleValue('');
-  onPolygonColorUpdate(); // This should trigger polygon updates
-};
+    setDataSources(updated);
+    setNewRuleValue('');
+  };
 
-  const handleRemoveRule = (sourceId: string, index: number): void => {
+  const handleRemoveRule = (sourceId: string, index: number) => {
     const updated = dataSources.map(source => {
       if (source.id === sourceId) {
         return {
@@ -62,22 +52,20 @@ const handleAddRule = (sourceId: string): void => {
       return source;
     });
 
-    onDataSourceChange(updated);
-    onPolygonColorUpdate();
+    setDataSources(updated);
   };
 
-  const handleFieldChange = (sourceId: string, field: string): void => {
+  const handleFieldChange = (sourceId: string, field: string) => {
     const updated = dataSources.map(source => {
       if (source.id === sourceId) {
         return { ...source, field };
       }
       return source;
     });
-    onDataSourceChange(updated);
-    onPolygonColorUpdate();
+    setDataSources(updated);
   };
 
-  const handleAddDataSource = (): void => {
+  const handleAddDataSource = () => {
     if (!newSourceName.trim()) return;
 
     const newSource: DataSource = {
@@ -89,25 +77,23 @@ const handleAddRule = (sourceId: string): void => {
       isRemovable: true
     };
 
-    onDataSourceChange([...dataSources, newSource]);
+    setDataSources([...dataSources, newSource]);
     setNewSourceName('');
     setNewSourceColor('#3b82f6');
     setNewSourceField('temperature_2m');
   };
 
-  const handleRemoveDataSource = (sourceId: string): void => {
+  const handleRemoveDataSource = (sourceId: string) => {
     if (dataSources.find(ds => ds.id === sourceId)?.isRemovable === false) {
-      return; // Prevent removal of mandatory sources
+      return;
     }
-    onDataSourceChange(dataSources.filter(ds => ds.id !== sourceId));
-    onPolygonColorUpdate();
+    setDataSources(dataSources.filter(ds => ds.id !== sourceId));
   };
 
   return (
     <Card className="p-4 h-full overflow-y-auto">
       <h2 className="text-xl font-semibold mb-4">Data Sources</h2>
       
-      {/* Add New Data Source Section */}
       <div className="mb-6 space-y-2">
         <h3 className="text-sm font-medium">Add New Data Source</h3>
         <div className="flex gap-2">
@@ -142,7 +128,6 @@ const handleAddRule = (sourceId: string): void => {
         </div>
       </div>
 
-      {/* Data Sources List */}
       <div className="space-y-4">
         {dataSources.map(source => (
           <div key={source.id} className="border rounded-lg p-3">
@@ -166,7 +151,6 @@ const handleAddRule = (sourceId: string): void => {
               )}
             </div>
 
-            {/* Field Selection */}
             <div className="mb-3">
               <label className="block text-sm font-medium mb-1">Field</label>
               <Select 
@@ -184,7 +168,6 @@ const handleAddRule = (sourceId: string): void => {
               </Select>
             </div>
 
-            {/* Color Rules */}
             <div className="space-y-2">
               <label className="block text-sm font-medium">Color Rules</label>
               
@@ -216,7 +199,6 @@ const handleAddRule = (sourceId: string): void => {
                 </div>
               )}
 
-              {/* Add New Rule Form */}
               <div className="pt-2">
                 <div className="flex gap-2 mb-2">
                   <Select 
