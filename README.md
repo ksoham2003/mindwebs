@@ -34,4 +34,47 @@ A Next.js application for visualizing environmental data with interactive maps a
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/environmental-dashboard.git
+   git clone https://github.com/ksoham2003/mindwebs.git
+   
+2. Install dependencies:
+   ```bash
+   cd mindwebs-timeline
+   npm install --legacy-peer-deps
+
+3. Run the development server:
+   ```bash
+   npm run dev
+
+4. Open [http://localhost:3000/](http://localhost:3000/) in your browser.
+
+### Usage
+
+## Drawing Polygons
+
+1. Click the "Draw Polygon" button
+2. Click on the map to create vertices (3-12 points)
+3. Complete the polygon by clicking the first point
+4. Name your polygon when prompted
+
+## Timeline Controls
+
+- Single Mode: Drag the slider to select a specific hour
+- Range Mode: Drag both ends to select a time range
+- Use the "Jump to Now" button to center on current time
+
+## Data Sources
+
+- Add new data sources in the sidebar
+- Configure color rules for each source
+- Assign data sources to polygons
+
+### API Integration
+
+The application uses the Open-Meteo API to fetch:
+- Temperature data (temperature_2m)
+- Historical weather data
+- Time-series information
+
+### Deployment
+Deploy to Vercel:
+[https://mindwebs-kappa.vercel.app/](https://mindwebs-kappa.vercel.app/)
