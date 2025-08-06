@@ -34,7 +34,7 @@ A Next.js application for visualizing environmental data with interactive maps a
 
 1. Clone the repository:
    ```bash
-   git clone [https://github.com/your-username/environmental-dashboard.git](https://github.com/ksoham2003/mindwebs)
+   git clone https://github.com/ksoham2003/mindwebs.git
    
 2. Install dependencies:
    ```bash
